@@ -18,6 +18,11 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 
+from cbv_api.views import router as cbv_router
+from functional.views import router as functional_router
+
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("functional/", functional_router.urls("functional")),
+    path("cbv/", cbv_router.urls("cbv"))
 ]
