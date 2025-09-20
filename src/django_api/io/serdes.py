@@ -30,6 +30,15 @@ class OutputSpec:
         self.content_type = renderer.content_type
 
 
+class JSONEncoder(DjangoJSONEncoder):
+    def default(self, o):
+        from django.db.models import QuerySet
+        if isinstance(o, QuerySet):
+            return list(o)
+        else:
+            super().default(o)
+
+
 class JSONParser(Parser):
     content_type = "application/json"
     def parse(self, body: bytes):
@@ -41,7 +50,7 @@ class JSONRenderer(Renderer):
     content_type = "application/json"
     def render(self, data) -> bytes:
         import json
-        return json.dumps(data, cls=DjangoJSONEncoder).encode("utf-8")
+        return json.dumps(data, cls=JSONEncoder).encode("utf-8")
 
 class IOException(Exception):
     pass
@@ -69,6 +78,12 @@ def io(input_spec: InputSpec | None = None, output_spec: OutputSpec | None = Non
                         raise IOException(str(ex))
                 else:
                     kwargs["data"] = primitives
+            if input_spec and request.method == "GET" and input_spec.adapter:
+                try:
+                    kwargs["data"] = input_spec.adapter.deserialize(request.GET.dict() or {})
+                except Exception as ex:
+                    # WIP The adapter should return something that can be serialized
+                    raise IOException(str(ex))
 
             # 2) call
             result = fn(request, *args, **kwargs)
@@ -80,7 +95,7 @@ def io(input_spec: InputSpec | None = None, output_spec: OutputSpec | None = Non
                 return result  # primitives or caller-managed
             try:
                 primitives = result
-                if output_spec.adapter and not isinstance(result, (dict, list, str, int, float, bool, type(None))):
+                if output_spec.adapter:
                     primitives = output_spec.adapter.serialize(result)
                 body = output_spec.renderer.render(primitives)
                 # WIP The developer should be able to specify specifics on the response as well

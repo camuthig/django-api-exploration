@@ -2,6 +2,8 @@ from typing import Any
 from typing import TypeVar
 
 from pydantic import BaseModel
+from pydantic import ConfigDict
+from pydantic import Field
 
 from django_api.io.serdes import Adapter
 
@@ -22,6 +24,23 @@ class PydanticAdapter(Adapter):
             model = self.model.model_validate(model)
 
         return model.model_dump()
+
+
+PaginatedModel = TypeVar("PaginatedModel", bound=BaseModel)
+
+
+class LimitOffsetPaginationModel[PaginatedModel](BaseModel):
+    items: list[PaginatedModel]
+    limit: int = Field(default=10, ge=1)
+    offset: int = Field(default=0, ge=0)
+    has_more: bool
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class LimitOffsetPaginationQueryModel(BaseModel):
+    limit: int = Field(10, ge=1)
+    offset: int = Field(0, ge=0)
 
 
 ReqModel = TypeVar("ReqModel", bound=BaseModel)

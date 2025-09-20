@@ -1,10 +1,13 @@
 from django.http import HttpRequest
-from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
 from pydantic import BaseModel
 from pydantic import ConfigDict
 
 from cbv_api.models import Department
+from django_api.io.pydantic_adapter import LimitOffsetPaginationModel
+from django_api.io.pydantic_adapter import LimitOffsetPaginationQueryModel
 from django_api.io.pydantic_adapter import pydantic_io
+from django_api.pagination import QuerySetLimitOffsetPaginator
 from django_api.router import Router
 
 router = Router()
@@ -15,10 +18,10 @@ class DepartmentModel(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-
 @router.get("/departments")
-def list_departments(request: HttpRequest):
-    return JsonResponse({"Hello": "World"})
+@pydantic_io(request=LimitOffsetPaginationQueryModel, response=LimitOffsetPaginationModel[DepartmentModel])
+def list_departments(request: HttpRequest, data: LimitOffsetPaginationQueryModel):
+    return QuerySetLimitOffsetPaginator(data.limit, data.offset, Department.objects.all())
 
 class CreateDepartmentModel(BaseModel):
     title: str
@@ -35,5 +38,6 @@ def create_department(request: HttpRequest, data: CreateDepartmentModel):
 
 
 @router.get("/departments/<int:department_id>")
+@pydantic_io(response=DepartmentModel)
 def get_department(request: HttpRequest, department_id: int):
-    return JsonResponse({"Get": department_id})
+    return get_object_or_404(Department, pk=department_id)
