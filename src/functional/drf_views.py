@@ -30,6 +30,6 @@ def list_departments(request):
 @router.post("/departments")
 @drf_io(request=DepartmentSerializer, response=DepartmentSerializer)
 def create_department(request, data: DepartmentSerializer):
-    instance = Department.objects.create(title=data.data["title"])
+    instance = data.save()
 
     return instance
