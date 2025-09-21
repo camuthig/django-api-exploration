@@ -1,8 +1,9 @@
-# python
 from typing import Any
 
 from django.core.serializers.json import DjangoJSONEncoder
 from django.http import HttpResponse
+
+from django_api.io.response import APIResponse
 
 
 class Parser:
@@ -36,7 +37,7 @@ class JSONEncoder(DjangoJSONEncoder):
         if isinstance(o, QuerySet):
             return list(o)
         else:
-            super().default(o)
+            return super().default(o)
 
 
 class JSONParser(Parser):
@@ -87,19 +88,28 @@ def io(input_spec: InputSpec | None = None, output_spec: OutputSpec | None = Non
 
             # 2) call
             result = fn(request, *args, **kwargs)
-            if hasattr(result, "status_code"):  # HttpResponse
-                return result
 
             # 3) serialize + render
             if not output_spec:
                 return result  # primitives or caller-managed
             try:
                 primitives = result
+                if isinstance(result, APIResponse):
+                    primitives = result.plain_content
+
                 if output_spec.adapter:
-                    primitives = output_spec.adapter.serialize(result)
+                    primitives = output_spec.adapter.serialize(primitives)
+
                 body = output_spec.renderer.render(primitives)
+
                 # WIP The developer should be able to specify specifics on the response as well
-                resp = HttpResponse(body, content_type=output_spec.content_type)
+                if isinstance(result, APIResponse):
+                    resp = result
+                    resp.content = body
+                    resp["Content-Type"] = output_spec.content_type
+                else:
+                    resp = HttpResponse(body, content_type=output_spec.content_type)
+
                 return resp
             except Exception as ex:
                 raise IOException(str(ex))

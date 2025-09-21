@@ -7,6 +7,7 @@ from cbv_api.models import Department
 from django_api.io.pydantic_adapter import LimitOffsetPaginationModel
 from django_api.io.pydantic_adapter import LimitOffsetPaginationQueryModel
 from django_api.io.pydantic_adapter import pydantic_io
+from django_api.io.response import APIResponse
 from django_api.pagination import QuerySetLimitOffsetPaginator
 from django_api.router import Router
 
@@ -21,7 +22,12 @@ class DepartmentModel(BaseModel):
 @router.get("/departments")
 @pydantic_io(request=LimitOffsetPaginationQueryModel, response=LimitOffsetPaginationModel[DepartmentModel])
 def list_departments(request: HttpRequest, data: LimitOffsetPaginationQueryModel):
-    return QuerySetLimitOffsetPaginator(data.limit, data.offset, Department.objects.all())
+    response = APIResponse(QuerySetLimitOffsetPaginator(data.limit, data.offset, Department.objects.all()))
+
+    # An example of adding custom headers to the response
+    response["X-Total-Count"] = Department.objects.count()
+
+    return response
 
 class CreateDepartmentModel(BaseModel):
     title: str
