@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
 
-from django_api.io.serdes import Serializer
+from django_api.io.io import Serializer
 
 BM = TypeVar("BM", bound=BaseModel)
 
@@ -48,13 +48,13 @@ RespModel = TypeVar("RespModel", bound=BaseModel)
 
 
 def pydantic_io(request: type[ReqModel] = None, response: type[RespModel] = None):
-    from django_api.io import serdes
+    from django_api.io import io
     input_spec = None
     if request:
-        input_spec = serdes.RequestFormat(parser=serdes.JSONParser(), serializer=PydanticSerializer(request))
+        input_spec = io.RequestFormat(parser=io.JSONParser(), serializer=PydanticSerializer(request))
 
     output_spec = None
     if response:
-        output_spec = serdes.ResponseFormat(renderer=serdes.JSONRenderer(), deserializer=PydanticSerializer(response))
+        output_spec = io.ResponseFormat(renderer=io.JSONRenderer(), deserializer=PydanticSerializer(response))
 
-    return serdes.io(input_spec=input_spec, output_spec=output_spec)
+    return io.io(input_spec=input_spec, output_spec=output_spec)

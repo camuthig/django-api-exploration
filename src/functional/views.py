@@ -8,7 +8,7 @@ from django_api.io.pydantic_serializer import LimitOffsetPaginationModel
 from django_api.io.pydantic_serializer import LimitOffsetPaginationQueryModel
 from django_api.io.pydantic_serializer import pydantic_io
 from django_api.io.response import APIResponse
-from django_api.io.serdes import json_io
+from django_api.io.io import json_io
 from django_api.pagination import QuerySetLimitOffsetPaginator
 from django_api.router import Router
 

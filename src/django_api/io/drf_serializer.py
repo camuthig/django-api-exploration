@@ -3,7 +3,7 @@ from typing import TypeVar
 
 from rest_framework import serializers
 
-from django_api.io.serdes import Serializer
+from django_api.io.io import Serializer
 
 
 class DRFSerializer(Serializer):
@@ -26,13 +26,13 @@ RespModel = TypeVar("RespModel", bound=serializers.Serializer)
 
 
 def drf_io(request: type[ReqModel] = None, response: type[RespModel] = None):
-    from django_api.io import serdes
+    from django_api.io import io
     input_spec = None
     if request:
-        input_spec = serdes.RequestFormat(parser=serdes.JSONParser(), serializer=DRFSerializer(request))
+        input_spec = io.RequestFormat(parser=io.JSONParser(), serializer=DRFSerializer(request))
 
     output_spec = None
     if response:
-        output_spec = serdes.ResponseFormat(renderer=serdes.JSONRenderer(), deserializer=DRFSerializer(response))
+        output_spec = io.ResponseFormat(renderer=io.JSONRenderer(), deserializer=DRFSerializer(response))
 
-    return serdes.io(input_spec=input_spec, output_spec=output_spec)
+    return io.io(input_spec=input_spec, output_spec=output_spec)
