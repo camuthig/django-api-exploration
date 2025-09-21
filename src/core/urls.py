@@ -19,10 +19,12 @@ from django.contrib import admin
 from django.urls import path
 
 from cbv_api.views import router as cbv_router
+from functional.drf_views import router as drf_router
 from functional.views import router as functional_router
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("functional/", functional_router.urls("functional")),
+    path("drf/", drf_router.urls("drf")),
     path("cbv/", cbv_router.urls("cbv"))
 ]

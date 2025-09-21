@@ -12,6 +12,9 @@ dependencies = [
 dev = [
     "ruff>=0.13.0",
 ]
+drf = [
+    "djangorestframework>=3.16.1",
+]
 pydantic = [
     "pydantic>=2.11.9",
 ]
