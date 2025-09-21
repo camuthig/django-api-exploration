@@ -4,14 +4,22 @@ from pydantic import BaseModel
 from pydantic import ConfigDict
 
 from cbv_api.models import Department
-from django_api.io.pydantic_adapter import LimitOffsetPaginationModel
-from django_api.io.pydantic_adapter import LimitOffsetPaginationQueryModel
-from django_api.io.pydantic_adapter import pydantic_io
+from django_api.io.pydantic_serializer import LimitOffsetPaginationModel
+from django_api.io.pydantic_serializer import LimitOffsetPaginationQueryModel
+from django_api.io.pydantic_serializer import pydantic_io
 from django_api.io.response import APIResponse
+from django_api.io.serdes import json_io
 from django_api.pagination import QuerySetLimitOffsetPaginator
 from django_api.router import Router
 
 router = Router()
+
+@router.get("/hello")
+@json_io()
+def hello(request: HttpRequest):
+    return {
+        "message": "Hello, world!",
+    }
 
 class DepartmentModel(BaseModel):
     id: int

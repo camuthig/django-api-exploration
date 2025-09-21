@@ -8,26 +8,34 @@ from django_api.io.response import APIResponse
 
 class Parser:
     content_type: str
-    def parse(self, body: bytes): ...
+
+    def parse(self, body: bytes):
+        raise NotImplementedError()
 
 class Renderer:
     content_type: str
-    def render(self, data) -> bytes: ...
 
-class Adapter:
-    def deserialize(self, primitives) -> Any: ...
-    def serialize(self, model: Any) -> dict | list | str | int | float | bool | None: ...
+    def render(self, data) -> bytes:
+        raise NotImplementedError()
 
-class InputSpec:
-    def __init__(self, parser: Parser, adapter: Adapter | None = None):
+class Serializer:
+    def deserialize(self, primitives) -> Any:
+        raise NotImplementedError()
+
+    def serialize(self, model: Any) -> dict | list | str | int | float | bool | None:
+        raise NotImplementedError()
+
+
+class RequestFormat:
+    def __init__(self, parser: Parser, serializer: Serializer | None = None):
         self.parser = parser
-        self.adapter = adapter
+        self.serializer = serializer
         self.content_type = parser.content_type
 
-class OutputSpec:
-    def __init__(self, renderer: Renderer, adapter: Adapter | None = None):
+class ResponseFormat:
+    def __init__(self, renderer: Renderer, deserializer: Serializer | None = None):
         self.renderer = renderer
-        self.adapter = adapter
+        self.deserializer = deserializer
         self.content_type = renderer.content_type
 
 
@@ -42,6 +50,7 @@ class JSONEncoder(DjangoJSONEncoder):
 
 class JSONParser(Parser):
     content_type = "application/json"
+
     def parse(self, body: bytes):
         import json
         return json.loads(body)
@@ -49,14 +58,17 @@ class JSONParser(Parser):
 
 class JSONRenderer(Renderer):
     content_type = "application/json"
+
     def render(self, data) -> bytes:
         import json
         return json.dumps(data, cls=JSONEncoder).encode("utf-8")
 
+
 class IOException(Exception):
     pass
 
-def io(input_spec: InputSpec | None = None, output_spec: OutputSpec | None = None):
+
+def io(input_spec: RequestFormat | None = None, output_spec: ResponseFormat | None = None):
     def decorate(fn):
         fn._router_io = {"consumes": getattr(input_spec, "content_type", None),
                          "produces": getattr(output_spec, "content_type", None)}
@@ -71,17 +83,17 @@ def io(input_spec: InputSpec | None = None, output_spec: OutputSpec | None = Non
                 except Exception as ex:
                     # WIP I think the parse should define how this gets handled?
                     raise ex
-                if input_spec.adapter:
+                if input_spec.serializer:
                     try:
-                        kwargs["data"] = input_spec.adapter.deserialize(primitives)
+                        kwargs["data"] = input_spec.serializer.deserialize(primitives)
                     except Exception as ex:
                         # WIP The adapter should return something that can be serialized
                         raise IOException(str(ex))
                 else:
                     kwargs["data"] = primitives
-            if input_spec and request.method == "GET" and input_spec.adapter:
+            if input_spec and request.method == "GET" and input_spec.serializer:
                 try:
-                    kwargs["data"] = input_spec.adapter.deserialize(request.GET.dict() or {})
+                    kwargs["data"] = input_spec.serializer.deserialize(request.GET.dict() or {})
                 except Exception as ex:
                     # WIP The adapter should return something that can be serialized
                     raise IOException(str(ex))
@@ -97,8 +109,8 @@ def io(input_spec: InputSpec | None = None, output_spec: OutputSpec | None = Non
                 if isinstance(result, APIResponse):
                     primitives = result.plain_content
 
-                if output_spec.adapter:
-                    primitives = output_spec.adapter.serialize(primitives)
+                if output_spec.deserializer:
+                    primitives = output_spec.deserializer.serialize(primitives)
 
                 body = output_spec.renderer.render(primitives)
 
@@ -115,3 +127,10 @@ def io(input_spec: InputSpec | None = None, output_spec: OutputSpec | None = Non
                 raise IOException(str(ex))
         return wrapper
     return decorate
+
+
+def json_io(request: Serializer | None = None, response: Serializer | None = None):
+    return io(
+        input_spec=RequestFormat(parser=JSONParser(), serializer=request),
+        output_spec=ResponseFormat(renderer=JSONRenderer(), deserializer=response)
+    )
