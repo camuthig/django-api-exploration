@@ -18,24 +18,24 @@ class Renderer:
     def render(self, data) -> bytes:
         raise NotImplementedError()
 
-class Serializer:
-    def deserialize(self, primitives) -> Any:
+class Mapper:
+    def from_primitives(self, primitives) -> Any:
         raise NotImplementedError()
 
-    def serialize(self, model: Any) -> dict | list | str | int | float | bool | None:
+    def to_primitives(self, model: Any) -> dict | list | str | int | float | bool | None:
         raise NotImplementedError()
 
 
-class RequestFormat:
-    def __init__(self, parser: Parser, serializer: Serializer | None = None):
+class RequestSpec:
+    def __init__(self, parser: Parser, mapper: Mapper | None = None):
         self.parser = parser
-        self.serializer = serializer
+        self.mapper = mapper
         self.content_type = parser.content_type
 
-class ResponseFormat:
-    def __init__(self, renderer: Renderer, deserializer: Serializer | None = None):
+class ResponseSpec:
+    def __init__(self, renderer: Renderer, mapper: Mapper | None = None):
         self.renderer = renderer
-        self.deserializer = deserializer
+        self.mapper = mapper
         self.content_type = renderer.content_type
 
 
@@ -68,32 +68,32 @@ class IOException(Exception):
     pass
 
 
-def io(input_spec: RequestFormat | None = None, output_spec: ResponseFormat | None = None):
+def schema(request_spec: RequestSpec | None = None, response_spec: ResponseSpec | None = None):
     def decorate(fn):
-        fn._router_io = {"consumes": getattr(input_spec, "content_type", None),
-                         "produces": getattr(output_spec, "content_type", None)}
+        fn._router_schema = {"consumes": getattr(request_spec, "content_type", None),
+                         "produces": getattr(response_spec, "content_type", None)}
         def wrapper(request, *args, **kwargs):
             # 1) parse + validate
-            if input_spec and request.method in {"POST", "PUT", "PATCH"}:
+            if request_spec and request.method in {"POST", "PUT", "PATCH"}:
                 req_ct = (request.headers.get("Content-Type") or "").split(";")[0].strip()
-                if req_ct != input_spec.content_type:
-                    raise IOException(f"Expected {input_spec.content_type} but got {req_ct}")
+                if req_ct != request_spec.content_type:
+                    raise IOException(f"Expected {request_spec.content_type} but got {req_ct}")
                 try:
-                    primitives = input_spec.parser.parse(request.body)
+                    primitives = request_spec.parser.parse(request.body)
                 except Exception as ex:
                     # WIP I think the parse should define how this gets handled?
                     raise ex
-                if input_spec.serializer:
+                if request_spec.mapper:
                     try:
-                        kwargs["data"] = input_spec.serializer.deserialize(primitives)
+                        kwargs["data"] = request_spec.mapper.from_primitives(primitives)
                     except Exception as ex:
                         # WIP The adapter should return something that can be serialized
                         raise IOException(str(ex))
                 else:
                     kwargs["data"] = primitives
-            if input_spec and request.method == "GET" and input_spec.serializer:
+            if request_spec and request.method == "GET" and request_spec.mapper:
                 try:
-                    kwargs["data"] = input_spec.serializer.deserialize(request.GET.dict() or {})
+                    kwargs["data"] = request_spec.mapper.from_primitives(request.GET.dict() or {})
                 except Exception as ex:
                     # WIP The adapter should return something that can be serialized
                     raise IOException(str(ex))
@@ -101,26 +101,25 @@ def io(input_spec: RequestFormat | None = None, output_spec: ResponseFormat | No
             # 2) call
             result = fn(request, *args, **kwargs)
 
-            # 3) serialize + render
-            if not output_spec:
+            # 3) map to primitives + render
+            if not response_spec:
                 return result  # primitives or caller-managed
             try:
                 primitives = result
                 if isinstance(result, APIResponse):
                     primitives = result.plain_content
 
-                if output_spec.deserializer:
-                    primitives = output_spec.deserializer.serialize(primitives)
+                if response_spec.mapper:
+                    primitives = response_spec.mapper.to_primitives(primitives)
 
-                body = output_spec.renderer.render(primitives)
+                body = response_spec.renderer.render(primitives)
 
-                # WIP The developer should be able to specify specifics on the response as well
                 if isinstance(result, APIResponse):
                     resp = result
                     resp.content = body
-                    resp["Content-Type"] = output_spec.content_type
+                    resp["Content-Type"] = response_spec.content_type
                 else:
-                    resp = HttpResponse(body, content_type=output_spec.content_type)
+                    resp = HttpResponse(body, content_type=response_spec.content_type)
 
                 return resp
             except Exception as ex:
@@ -129,8 +128,8 @@ def io(input_spec: RequestFormat | None = None, output_spec: ResponseFormat | No
     return decorate
 
 
-def json_io(request: Serializer | None = None, response: Serializer | None = None):
-    return io(
-        input_spec=RequestFormat(parser=JSONParser(), serializer=request),
-        output_spec=ResponseFormat(renderer=JSONRenderer(), deserializer=response)
+def json_schema(request: Mapper | None = None, response: Mapper | None = None):
+    return schema(
+        request_spec=RequestSpec(parser=JSONParser(), mapper=request),
+        response_spec=ResponseSpec(renderer=JSONRenderer(), mapper=response)
     )

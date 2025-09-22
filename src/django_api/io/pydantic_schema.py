@@ -5,20 +5,20 @@ from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
 
-from django_api.io.io import Serializer
+from django_api.io.io import Mapper
 
 BM = TypeVar("BM", bound=BaseModel)
 
 
-class PydanticSerializer(Serializer):
+class PydanticMapper(Mapper):
     def __init__(self, model: type[BM]):
         self.model = model
 
-    def deserialize(self, primitives) -> Any:
+    def from_primitives(self, primitives) -> Any:
         # WIP Error handling here is important
         return self.model.model_validate(primitives)
 
-    def serialize(self, model) -> dict | list | str | int | float | bool | None:
+    def to_primitives(self, model) -> dict | list | str | int | float | bool | None:
         # WIP Error handling here is important
         if not isinstance(model, self.model):
             model = self.model.model_validate(model)
@@ -47,14 +47,14 @@ ReqModel = TypeVar("ReqModel", bound=BaseModel)
 RespModel = TypeVar("RespModel", bound=BaseModel)
 
 
-def pydantic_io(request: type[ReqModel] = None, response: type[RespModel] = None):
+def json_schema(request: type[ReqModel] = None, response: type[RespModel] = None):
     from django_api.io import io
     input_spec = None
     if request:
-        input_spec = io.RequestFormat(parser=io.JSONParser(), serializer=PydanticSerializer(request))
+        input_spec = io.RequestSpec(parser=io.JSONParser(), mapper=PydanticMapper(request))
 
     output_spec = None
     if response:
-        output_spec = io.ResponseFormat(renderer=io.JSONRenderer(), deserializer=PydanticSerializer(response))
+        output_spec = io.ResponseSpec(renderer=io.JSONRenderer(), mapper=PydanticMapper(response))
 
-    return io.io(input_spec=input_spec, output_spec=output_spec)
+    return io.schema(request_spec=input_spec, response_spec=output_spec)

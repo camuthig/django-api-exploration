@@ -4,22 +4,15 @@ from pydantic import BaseModel
 from pydantic import ConfigDict
 
 from cbv_api.models import Department
-from django_api.io.pydantic_serializer import LimitOffsetPaginationModel
-from django_api.io.pydantic_serializer import LimitOffsetPaginationQueryModel
-from django_api.io.pydantic_serializer import pydantic_io
+from django_api.io.pydantic_schema import LimitOffsetPaginationModel
+from django_api.io.pydantic_schema import LimitOffsetPaginationQueryModel
+from django_api.io.pydantic_schema import json_schema
 from django_api.io.response import APIResponse
-from django_api.io.io import json_io
 from django_api.pagination import QuerySetLimitOffsetPaginator
 from django_api.router import Router
 
 router = Router()
 
-@router.get("/hello")
-@json_io()
-def hello(request: HttpRequest):
-    return {
-        "message": "Hello, world!",
-    }
 
 class DepartmentModel(BaseModel):
     id: int
@@ -28,7 +21,7 @@ class DepartmentModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 @router.get("/departments")
-@pydantic_io(request=LimitOffsetPaginationQueryModel, response=LimitOffsetPaginationModel[DepartmentModel])
+@json_schema(request=LimitOffsetPaginationQueryModel, response=LimitOffsetPaginationModel[DepartmentModel])
 def list_departments(request: HttpRequest, data: LimitOffsetPaginationQueryModel):
     response = APIResponse(QuerySetLimitOffsetPaginator(data.limit, data.offset, Department.objects.all()))
 
@@ -44,7 +37,7 @@ class CreateDepartmentModel(BaseModel):
 
 
 @router.post("/departments")
-@pydantic_io(request=CreateDepartmentModel, response=DepartmentModel)
+@json_schema(request=CreateDepartmentModel, response=DepartmentModel)
 def create_department(request: HttpRequest, data: CreateDepartmentModel):
     instance = Department.objects.create(title=data.title)
 
@@ -52,6 +45,6 @@ def create_department(request: HttpRequest, data: CreateDepartmentModel):
 
 
 @router.get("/departments/<int:department_id>")
-@pydantic_io(response=DepartmentModel)
+@json_schema(response=DepartmentModel)
 def get_department(request: HttpRequest, department_id: int):
     return get_object_or_404(Department, pk=department_id)
