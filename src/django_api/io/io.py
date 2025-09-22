@@ -7,6 +7,7 @@ from django_api.io.response import APIResponse
 
 
 class Parser:
+    # Note: These parsers should be replaced by the work proposed in DEP 0015 https://github.com/django/deps/pull/88
     content_type: str
 
     def parse(self, body: bytes):
@@ -24,7 +25,6 @@ class Mapper:
 
     def to_primitives(self, model: Any) -> dict | list | str | int | float | bool | None:
         raise NotImplementedError()
-
 
 class RequestSpec:
     def __init__(self, parser: Parser, mapper: Mapper | None = None):
