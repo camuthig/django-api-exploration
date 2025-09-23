@@ -3,7 +3,7 @@ from django.shortcuts import get_object_or_404
 from pydantic import BaseModel
 from pydantic import ConfigDict
 
-from cbv_api.models import Department
+from domain.models import Department
 from django_api.io.pydantic_protocol import LimitOffsetPaginationModel
 from django_api.io.pydantic_protocol import LimitOffsetPaginationQueryModel
 from django_api.io.pydantic_protocol import json_protocol

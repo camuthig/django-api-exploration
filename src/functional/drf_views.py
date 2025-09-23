@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from cbv_api.models import Department
+from domain.models import Department
 from django_api.io.drf_protocol import json_protocol
 from django_api.pagination import QuerySetLimitOffsetPaginator
 from django_api.router import Router
