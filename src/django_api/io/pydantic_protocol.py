@@ -47,7 +47,7 @@ ReqModel = TypeVar("ReqModel", bound=BaseModel)
 RespModel = TypeVar("RespModel", bound=BaseModel)
 
 
-def json_schema(request: type[ReqModel] = None, response: type[RespModel] = None):
+def json_protocol(request: type[ReqModel] = None, response: type[RespModel] = None):
     from django_api.io import io
     input_spec = None
     if request:
@@ -57,4 +57,4 @@ def json_schema(request: type[ReqModel] = None, response: type[RespModel] = None
     if response:
         output_spec = io.ResponseSpec(renderer=io.JSONRenderer(), mapper=PydanticMapper(response))
 
-    return io.schema(request_spec=input_spec, response_spec=output_spec)
+    return io.protocol(request_spec=input_spec, response_spec=output_spec)

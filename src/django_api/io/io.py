@@ -68,7 +68,7 @@ class IOException(Exception):
     pass
 
 
-def schema(request_spec: RequestSpec | None = None, response_spec: ResponseSpec | None = None):
+def protocol(request_spec: RequestSpec | None = None, response_spec: ResponseSpec | None = None):
     def decorate(fn):
         fn._router_schema = {"consumes": getattr(request_spec, "content_type", None),
                          "produces": getattr(response_spec, "content_type", None)}
@@ -128,8 +128,8 @@ def schema(request_spec: RequestSpec | None = None, response_spec: ResponseSpec 
     return decorate
 
 
-def json_schema(request: Mapper | None = None, response: Mapper | None = None):
-    return schema(
+def json_protocol(request: Mapper | None = None, response: Mapper | None = None):
+    return protocol(
         request_spec=RequestSpec(parser=JSONParser(), mapper=request),
         response_spec=ResponseSpec(renderer=JSONRenderer(), mapper=response)
     )

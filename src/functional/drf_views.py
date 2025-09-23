@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from cbv_api.models import Department
-from django_api.io.drf_schema import json_schema
+from django_api.io.drf_protocol import json_protocol
 from django_api.pagination import QuerySetLimitOffsetPaginator
 from django_api.router import Router
 
@@ -22,13 +22,13 @@ class PaginatedDepartmentSerializer(serializers.Serializer):
 
 
 @router.get("/departments")
-@json_schema(response=PaginatedDepartmentSerializer)
+@json_protocol(response=PaginatedDepartmentSerializer)
 def list_departments(request):
     return QuerySetLimitOffsetPaginator(10, 0, Department.objects.all())
 
 
 @router.post("/departments")
-@json_schema(request=DepartmentSerializer, response=DepartmentSerializer)
+@json_protocol(request=DepartmentSerializer, response=DepartmentSerializer)
 def create_department(request, data: DepartmentSerializer):
     instance = data.save()
 
