@@ -17,6 +17,11 @@ I have two examples of writing function-based views with mappers using [Pydantic
 
 The bulk of the "Django" code is in the `django_api` package.
 
+- [Important Parts of an API Layer](#important-parts-of-an-api-layer)
+- [Routing](#routing)
+- [Protocols](#protocols)
+- [Mising Pieces](#mising-pieces)
+
 ## Important Parts of an API Layer
 
 These are my top-level thoughts on what makes a great API-first developer experience.
@@ -166,6 +171,41 @@ even nothing. I have a couple of examples using [pydantic](src/functional/pydant
 
 My concern is that this layer is creating a decent bit of code. Most of that I was able to encapsulate away into the
 decorators in the "easy" use cases, though, which I think is aligned with Django's core tenets. 
+
+At a high level, what this could look a bit like with Pydantic is
+
+```python
+from django.http import HttpRequest
+from pydantic import BaseModel
+from pydantic import ConfigDict
+
+from django_api.io.pydantic_protocol import LimitOffsetPaginationModel
+from django_api.io.pydantic_protocol import LimitOffsetPaginationQueryModel
+from django_api.io.pydantic_protocol import json_protocol
+from django_api.io.response import APIResponse
+from django_api.pagination import QuerySetLimitOffsetPaginator
+from django_api.router import Router
+from domain.models import Department
+
+router = Router()
+
+
+class DepartmentModel(BaseModel):
+    id: int
+    title: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+@router.get("/departments")
+@json_protocol(request=LimitOffsetPaginationQueryModel, response=LimitOffsetPaginationModel[DepartmentModel])
+def list_departments(request: HttpRequest, data: LimitOffsetPaginationQueryModel):
+    response = APIResponse(QuerySetLimitOffsetPaginator(data.limit, data.offset, Department.objects.all()))
+
+    # An example of adding custom headers to the response
+    response["X-Total-Count"] = Department.objects.count()
+
+    return response
+```
 
 ## Mising Pieces
 
