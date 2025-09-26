@@ -18,6 +18,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 
+from class_based import cbv_simple_router
 from functional import simple_router
 from functional.drf_views import router as drf_router
 from functional.pydantic_views import router as pydantic_router
@@ -27,4 +28,5 @@ urlpatterns = [
     path("functional/router/", simple_router.router.urls("simple")),
     path("functional/pydantic/", pydantic_router.urls("pydantic")),
     path("functional/drf/", drf_router.urls("drf")),
+    path("cbv/router/", cbv_simple_router.router.urls("cbv")),
 ]
