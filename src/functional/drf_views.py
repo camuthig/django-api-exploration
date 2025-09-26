@@ -1,9 +1,9 @@
 from rest_framework import serializers
 
-from domain.models import Department
 from django_api.io.drf_protocol import json_protocol
 from django_api.pagination import QuerySetLimitOffsetPaginator
 from django_api.router import Router
+from domain.models import Department
 
 router = Router()
 
