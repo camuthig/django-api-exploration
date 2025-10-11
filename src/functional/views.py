@@ -5,14 +5,14 @@ from django_api.router import Router
 
 router = Router()
 
-@router.get("/departments")
-def list_departments(request: HttpRequest):
+@router.get("/products")
+def list_products(request: HttpRequest):
     return JsonResponse({"Hello": "World"})
 
-@router.post("/departments")
-def create_department(request: HttpRequest):
+@router.post("/products")
+def create_product(request: HttpRequest):
     return JsonResponse({"Create": "World"})
 
-@router.get("/departments/<int:department_id>")
-def get_department(request: HttpRequest, department_id: int):
-    return JsonResponse({"Get": department_id})
+@router.get("/products/<int:product_id>")
+def get_product(request: HttpRequest, product_id: int):
+    return JsonResponse({"Get": product_id})
