@@ -10,17 +10,22 @@ BM = TypeVar("BM", bound=BaseModel)
 
 
 class PydanticMapper(AbstractMapper):
-    def __init__(self, base_model: type[BM] | None = None):
+    def __init__(self, *, base_model: type[BM] | None = None, data: dict | list = None, **kwargs):
         # Allow subclasses to define an inner Meta with `form`
         meta_base_model = getattr(getattr(self, "Meta", None), "base_model", None)
         self.base_model: type[BM] | None = base_model or meta_base_model
         if self.base_model is None:
             raise ValueError("PydanticMapper requires a base model class via __init__(base_model=...) or Meta.base_model")
 
-    def load(self, data):
-        self._model = self.base_model.model_validate(data)
+        self.data = data
+
+    def full_clean(self):
+        self._model = self.base_model.model_validate(self.data)
 
     def get_data(self) -> dict | list:
+        if self._model is None:
+            raise ValueError("You must call full_clean() before calling get_data()")
+
         return self._model.model_dump()
 
     def dump(self, obj) -> dict | list:
@@ -34,9 +39,19 @@ M = TypeVar("M", bound=Model)
 
 
 class PydanticModelMapper(PydanticMapper):
-    def __init__(self, model: type[BM] | None = None, base_model: type[BM] | None = None):
-        super().__init__(base_model)
-        self._instance = None
+    def __init__(
+        self,
+        *,
+        model: type[BM] | None = None,
+        base_model: type[BM] | None = None,
+        data: dict | list = None,
+        instance: M | None = None,
+        **kwargs,
+    ):
+        super().__init__(base_model=base_model, data=data, **kwargs)
+        self._instance = instance
+        if self.instance is not None:
+            self._model = self.base_model.model_validate(self.instance)
         self._m2m = {}
 
         meta_model = getattr(getattr(self, "Meta", None), "model", None)

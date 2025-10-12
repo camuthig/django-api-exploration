@@ -7,10 +7,9 @@ from django.forms import ModelForm
 
 class AbstractMapper(metaclass=abc.ABCMeta):
     @abc.abstractmethod
-    def load(self, data: dict | list):
+    def full_clean(self):
         """
-        A function that receives a dictionary or list of Python primitive values, validates them, and loads them into
-        the mapper as cleaned data.
+        Validate the data.
         """
         ...
 
@@ -57,18 +56,19 @@ class AbstractModelMapper(AbstractMapper, metaclass=abc.ABCMeta):
 F = TypeVar("F", bound=BaseModelForm)
 
 class FormMapper(AbstractMapper):
-    def __init__(self, form: type[F] | None = None):
-        # Allow subclasses to define an inner Meta with `form`
+    def __init__(self, *, form: type[F] | None = None, **form_kwargs):
         meta_form = getattr(getattr(self, "Meta", None), "form", None)
         self.form_class: type[F] | None = form or meta_form
         if self.form_class is None:
             raise ValueError("FormMapper requires a form class via __init__(form=...) or Meta.form")
 
+        self._form: F = self.form_class(**form_kwargs)
 
-    def load(self, data):
-        self._form = self.form_class(data)
+    def full_clean(self):
+        """
+        Run validation on the underlying form, raising ValueError if invalid.
+        """
         self._form.full_clean()
-
         if not self._form.is_valid():
             raise ValueError(self._form.errors)
 
@@ -79,6 +79,9 @@ class FormMapper(AbstractMapper):
 
 
     def get_data(self):
+        if self._form.instance and not self._form.data:
+            return self._form.initial
+
         return dict(self._form.cleaned_data)
 
     def get_schema(self):
@@ -98,8 +101,8 @@ class FormMapper(AbstractMapper):
 
 
 class ModelFormMapper(FormMapper, AbstractModelMapper):
-    def __init__(self, form_class: type[ModelForm] = None):
-        super().__init__(form_class)
+    def __init__(self, *, form: type[ModelForm] | None = None, data=None, instance=None, **form_kwargs):
+        super().__init__(form=form, data=data, instance=instance, **form_kwargs)
 
     def save(self, commit: bool = True):
         return self._form.save(commit=commit)

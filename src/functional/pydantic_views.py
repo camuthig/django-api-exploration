@@ -45,17 +45,16 @@ def list_products(request: HttpRequest):
 
 @router.post("/products")
 def create_product(request: HttpRequest):
-    input_mapper = ProductCreateMapper()
-    input_mapper.load(json.loads(request.body))
-
+    input_mapper = ProductCreateMapper(data=json.loads(request.body))
+    input_mapper.full_clean()
     input_mapper.save()
 
-    output_mapper = ProductResponseMapper()
-    return JsonResponse(output_mapper.dump(input_mapper.instance))
+    output_mapper = ProductResponseMapper(instance=input_mapper.instance)
+    return JsonResponse(output_mapper.get_data())
 
 @router.get("/products/<int:product_id>")
 def get_product(request: HttpRequest, product_id: int):
     instance = get_object_or_404(Product, pk=product_id)
-    output_mapper = ProductResponseMapper()
+    output_mapper = ProductResponseMapper(instance=instance)
 
-    return JsonResponse(output_mapper.dump(instance))
+    return JsonResponse(output_mapper.get_data())
