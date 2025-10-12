@@ -19,10 +19,14 @@ from django.contrib import admin
 from django.urls import path
 
 from cbv_api.views import router as cbv_router
+from functional.form_views import router as functional_form_router
+from functional.pydantic_views import router as functional_pydantic_router
 from functional.views import router as functional_router
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("functional/", functional_router.urls("functional")),
+    path("functional/forms/", functional_form_router.urls("functional_forms")),
+    path("functional/pydantic/", functional_pydantic_router.urls("functional_pydantic")),
     path("cbv/", cbv_router.urls("cbv"))
 ]
